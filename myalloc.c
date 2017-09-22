@@ -173,57 +173,6 @@ void free(void *ptr){
 
 
 
-int main(){
-
-  /*LOOK INTO NEGATIVE NUMBERS-UNSIGNED, INCLUDES LARGE CHUNKS...*/
-  // void *t1 = myalloc(INTPTR_MAX-17);
-  // printf("Test1: sz=-4, p=%p\n", t1);
-  // void *t2 = myalloc(0);
-  // printf("Test2: sz=0, p=%p\n", t2);
-  void *t3 = myalloc(1);
-  // printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
-  //
-
-  char *str;
-  str = (char*) myalloc(6);
-  // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
-  //
-  // *str = 'h';
-  // *(str+1) = 'e';
-  // *(str+2) = 'l';
-  // *(str+3) = 'l';
-  // *(str+4) = 'o';
-  // *(str+5) = '\0';
-
-  int *ip = (int*) myalloc(31);
-  struct chunk *t = getchunk((uintptr_t)ip);
-  printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-  //
-  // double *dp = (double*) myalloc(100);
-  //
-  // void *vp = myalloc(150);
-  // // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
-  // // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
-  // void *vpn = myalloc(37);
-  // if(t = getchunk(INTPTR_MAX))
-  //   printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-  //
-  // void *vpn2 = myalloc(1024);
-
-  fprintMemory("memoryprint.txt");
-
-  free(str);
-  free(t3);
-  free(ip);
-  // mergechunks();
-  fprintMemory("merged.txt");
-
-  printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
-  return 0;
-}
-
-
-
 
 
 /* Clear and Allocate memory,
@@ -238,19 +187,72 @@ void *calloc(size_t n, size_t sz){
   if((vp = myalloc(membytes)) == NULL){
     return NULL;
   }
-  // struct chunk *t;
-  // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
 
   /*clear all memory cells*/
-  long *tp = (long*) vp;
-  for(int i = 0; i<(membytes/sizeof(long)); i++){
-    // printf("pre: %ld, post: ", *(tp+i));
+  int *tp = (int*) vp;
+  for(int i = 0; i<(membytes/sizeof(int)); i++){
     *(tp+i) = 0;
-    // printf("%ld\n", *(tp+i));
   }
 
   return vp;
 }
+
+
+
+int main(){
+
+  /*LOOK INTO NEGATIVE NUMBERS-UNSIGNED, INCLUDES LARGE CHUNKS...*/
+  // void *t1 = myalloc(INTPTR_MAX-17);
+  // printf("Test1: sz=-4, p=%p\n", t1);
+  // void *t2 = myalloc(0);
+  // printf("Test2: sz=0, p=%p\n", t2);
+  // void *t3 = myalloc(1);
+  // printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
+  //
+
+  int *str;
+  str = (int*) myalloc(400);
+  // int *tp = str;
+  // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
+  //
+  // *str = 'h';
+  // *(str+1) = 'e';
+  // *(str+2) = 'l';
+  // *(str+3) = 'l';
+  // *(str+4) = 'o';
+  // *(str+5) = '\0';
+
+  // int *ip = (int*) myalloc(31);
+  // struct chunk *t = getchunk((uintptr_t)ip);
+  // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+  //
+  // double *dp = (double*) myalloc(100);
+  //
+  // void *vp = myalloc(150);
+  // // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
+  // // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
+  // void *vpn = myalloc(37);
+  // if(t = getchunk(INTPTR_MAX))
+  //   printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+  //
+  // void *vpn2 = myalloc(1024);
+
+  fprintMemory("memoryprint.txt");
+
+  // free(str);
+  // free(t3);
+  // free(ip);
+  // mergechunks();
+  // fprintMemory("merged.txt");
+
+  printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
+  return 0;
+}
+
+
+
+
+
 
 
 
