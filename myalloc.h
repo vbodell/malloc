@@ -95,6 +95,59 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
 
 
 
+
+void mergechunks(){
+  /*Traverse and merge adjacent free chunks*/
+  struct chunk *t;
+
+  for(t = MEM; t->next; t=t->next){
+    /*If current chunk is free we can start merging*/
+    if(t->isfree){
+      struct chunk *temp = t->next;
+
+      while(temp && temp->isfree){
+        /*If there is a next chunk that also happens to be free*/
+        // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", temp->chunksize, temp->isfree, temp->memptr, temp->next);
+        t->chunksize += temp->chunksize+HEADERSIZE; /*increment size of first*/
+        t->next = temp->next; /*remove temp from chain (now part of memoryblock)*/
+        temp = temp->next; /*Move to adjacent free chunk*/
+        // printf("%p\n", temp);
+      }
+    }
+    /*while merging we might be on last node, thus we must break forloop*/
+    if(t->next == NULL)
+      break;
+    /*We have now merged all we can, move to next node*/
+  }
+  return;
+}
+
+
+/*Gets the chunk specified from address
+returns null if address is not amongst chunks*/
+struct chunk *getchunk(uintptr_t address){
+  struct chunk *temp = MEM;
+
+  /*Checking if address is within previously allocated memory*/
+  if((address < temp->memptr) || (address > UPPERLIM))
+    return NULL; /*if not we return null*/
+
+  for(; temp->next; temp=temp->next){
+   if( (address >= temp->memptr) && (address < (uintptr_t) temp->next) ){
+      /*Address is between two adjacent nodes, belongs to first of them*/
+      return temp;
+    }
+  }
+  /*we're on last node*/
+  if((address >= temp->memptr) && (address <= UPPERLIM)){
+    return temp;
+  }
+  /*If we end up here address specified was in a HEADER, wrong argument*/
+  return NULL;
+}
+
+
+
 void fprintMemory(char * fname)
 {
   FILE *fp;

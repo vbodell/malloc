@@ -16,55 +16,6 @@ First working version: TBA
 
 
 
-void mergechunks(){
-  /*Traverse and merge adjacent free chunks*/
-  struct chunk *t;
-
-  for(t = MEM; t->next; t=t->next){
-    /*If current chunk is free we can start merging*/
-    if(t->isfree){
-      struct chunk *temp = t->next;
-
-      while(temp && temp->isfree){
-        /*If there is a next chunk that also happens to be free*/
-        // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", temp->chunksize, temp->isfree, temp->memptr, temp->next);
-        t->chunksize += temp->chunksize+HEADERSIZE; /*increment size of first*/
-        t->next = temp->next; /*remove temp from chain (now part of memoryblock)*/
-        temp = temp->next; /*Move to adjacent free chunk*/
-        // printf("%p\n", temp);
-      }
-    }
-    /*while merging we might be on last node, thus we must break forloop*/
-    if(t->next == NULL)
-      break;
-    /*We have now merged all we can, move to next node*/
-  }
-  return;
-}
-
-
-/*Gets the chunk specified from address
-returns null if address is not amongst chunks*/
-struct chunk *getchunk(uintptr_t address){
-  struct chunk *temp = MEM;
-
-  /*Checking if address is within previously allocated memory*/
-  if((address < temp->memptr) || (address > UPPERLIM))
-    return NULL; /*if not we return null*/
-
-  for(; temp->next; temp=temp->next){
-    if( (address >= temp->memptr) && (address < temp->next->memptr) ){
-      /*Address is between two adjacent nodes, belongs to first of them*/
-      return temp;
-    }
-  }
-  /*we're on last node*/
-  if((address >= temp->memptr) && (address <= UPPERLIM)){
-    return temp;
-  }
-  /*If we end up here something went wrong*/
-  return NULL;
-}
 
 
 /*Okay, so now this should return some memory, but sbrk2 should probably
@@ -210,40 +161,46 @@ int main(){
   // printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
   //
 
-  int *str;
-  str = (int*) myalloc(400);
+  char *str;
+  str = (char*) myalloc(400);
   // int *tp = str;
   // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
   //
-  // *str = 'h';
-  // *(str+1) = 'e';
-  // *(str+2) = 'l';
-  // *(str+3) = 'l';
-  // *(str+4) = 'o';
-  // *(str+5) = '\0';
+  *str = 'h';
+  *(str+1) = 'e';
+  *(str+2) = 'l';
+  *(str+3) = 'l';
+  *(str+4) = 'o';
+  *(str+5) = '\0';
 
-  // int *ip = (int*) myalloc(31);
-  // struct chunk *t = getchunk((uintptr_t)ip);
-  // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-  //
-  // double *dp = (double*) myalloc(100);
-  //
-  // void *vp = myalloc(150);
-  // // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
-  // // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
-  // void *vpn = myalloc(37);
-  // if(t = getchunk(INTPTR_MAX))
-  //   printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-  //
-  // void *vpn2 = myalloc(1024);
+  printf("\n%s, %p\n\n", str, str);
+
+  int *ip = (int*) myalloc(31);
+  struct chunk *t = getchunk((uintptr_t)ip);
+  printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+
+  double *dp = (double*) myalloc(100);
+
+  void *vp = myalloc(150);
+  printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
+  // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
+  void *vpn = myalloc(37);
+  uintptr_t req = (uintptr_t)vpn + 48+HEADERSIZE;
+  printf("%p\n", req);
+  if((t = getchunk(req)))
+    printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+
+  fprintMemory("before.txt");
+  void *vpn2 = myalloc(1024);
 
   fprintMemory("memoryprint.txt");
 
-  // free(str);
-  // free(t3);
-  // free(ip);
+  free(str);
+  free(dp);
+  free(vp);
+  free(ip);
   // mergechunks();
-  // fprintMemory("merged.txt");
+  fprintMemory("merged.txt");
 
   printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
   return 0;
