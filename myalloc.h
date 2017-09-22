@@ -42,27 +42,32 @@ static uintptr_t UPPERLIM = 0;
 
 void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
   struct chunk *newbreak;
-  
-  uintptr_t memrequest = sizerequest > CAKESIZE ? sizerequest : CAKESIZE;
+
+  uintptr_t memrequest = (sizerequest+HEADERSIZE) > CAKESIZE ?
+          sizerequest+HEADERSIZE : CAKESIZE;
   if((newbreak = (struct chunk*) sbrk(memrequest)) == SBRKERR){
     /*sbrk(2) failed*/
     errno = ENOMEM;
     return NULL;
   }
-
+  /*pointer for arithmetics*/
+  uintptr_t nbrkptr = (uintptr_t) newbreak;
   /*If First BREAK has not been set, set it*/
   if(!BREAK)
-    BREAK = (uintptr_t) newbreak;
+    BREAK = nbrkptr;
 
-  UPPERLIM = (uintptr_t) newbreak + memrequest;
-  /*current address for user memory & header (only offset is header)*/
-  uintptr_t current_user_memory = (uintptr_t) newbreak+HEADERSIZE;
-  uintptr_t current_header = (uintptr_t) newbreak;
+  /*Set current upper limit*/
+  UPPERLIM = nbrkptr + memrequest;
+  printf("UL %lx\n", UPPERLIM);
+  printf("brk %p\n", newbreak);
+  printf("brk %lx\n", nbrkptr);
+  // /*current address for user memory*/
+  // uintptr_t current_user_memory = nbrkptr+HEADERSIZE;
 
   /*Correctly initialize starting chunk to correct place in memory*/
   newbreak->chunksize = sizerequest,
   newbreak->isfree = FALSE,
-  newbreak->memptr = current_user_memory;
+  newbreak->memptr = nbrkptr+HEADERSIZE;
 
 
   /*If node is NULL, there is no root & memory has not been initialized*/
@@ -73,23 +78,25 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
     node->next = newbreak;
   }
 
-  /* node used for traverse*/
-  struct chunk *temp = newbreak;
+  // /* node used for traverse*/
+  // struct chunk *temp = newbreak;
 
-  /*set memory pointers to next position*/
-  uintptr_t chunk_tot_sz = sizerequest + HEADERSIZE;
-  current_user_memory += chunk_tot_sz;
-  current_header += chunk_tot_sz;
+  // /*set memory pointers to next position*/
+  // uintptr_t chunk_tot_sz = memrequest + HEADERSIZE;
+  // current_user_memory += chunk_tot_sz;
 
+  struct chunk *t = newbreak;
+  int remaining_CAKE = UPPERLIM - (newbreak->memptr + newbreak->chunksize + HEADERSIZE);
+  printf("UL %lx mptr %lx sz %lx h %lx\n", UPPERLIM, newbreak->memptr, newbreak->chunksize, HEADERSIZE);
+  printf("RC %d\n", remaining_CAKE);
+  if(remaining_CAKE > 0){/*Create chunk out of remaining memoryspace*/
+    t->next = (struct chunk*) (newbreak->memptr + newbreak->chunksize);
+    t = t->next;
 
-  uintptr_t remaining_CAKE = UPPERLIM - current_user_memory;
-  if(remaining_CAKE){/*Create chunk out of remaining memoryspace*/
-    temp->next = (struct chunk*) current_header;
-    temp = temp->next;
-
-    temp->chunksize = remaining_CAKE;
-    temp->isfree = TRUE;
-    temp->memptr = current_user_memory;
+    nbrkptr = (uintptr_t) t;
+    t->chunksize = remaining_CAKE;
+    t->isfree = TRUE;
+    t->memptr = nbrkptr + HEADERSIZE;
 
     /*no need to increment traverse variables since we are done*/
   }
