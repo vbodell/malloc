@@ -14,7 +14,7 @@ First working version: TBA
 #include <unistd.h> /* For syscall declarations */
 #include "myalloc.h"
 
-#define MAXSIZEREQ (uintptr_t) -16
+
 
 void mergechunks(){
   /*Traverse and merge adjacent free chunks*/
@@ -46,7 +46,7 @@ void mergechunks(){
 /*Okay, so now this should return some memory, but sbrk2 should probably
 be modified to correctly address where headers are put...*/
 void *myalloc(size_t sizerequest){
-  if(sizerequest == 0 || sizerequest > (INTPTR_MAX-ALIGNER)){
+  if(sizerequest == 0 || sizerequest > (INTPTR_MAX-ALIGNER-HEADERSIZE)){
     /*Nothing to allocate, or request to big*/
     return NULL;
   }
@@ -63,10 +63,6 @@ void *myalloc(size_t sizerequest){
     return more_memory_please(MEM, sizerequest);
   }
 
-  /*Accumulator to make sure we can use adjacent nodes*/
-  int accsize = -HEADERSIZE; /*account for header of first chunk*/
-  struct chunk *firstAccNode = MEM;
-
   struct chunk *node;
   /*Traverse linked list and look for (a) chunk(s) big enough*/
   for(node = MEM; node->next != NULL; node = node->next){
@@ -77,67 +73,76 @@ void *myalloc(size_t sizerequest){
 
     if( node->isfree && (sizerequest <= node->chunksize) ){
       /*Best case, chunk is free & big enough*/
-      /*Set chunk to busy & return pointer to memoryaddress*/
+      /*Set chunk to busy */
       node->isfree = FALSE;
+      /*create new chunk out of unused memory*/
+      if(sizerequest+HEADERSIZE < node->chunksize){
+        struct chunk *temp = node->next;
+
+
+        node->next = (struct chunk*) (node->memptr + sizerequest);
+        struct chunk *newnode = node->next;
+
+        newnode->chunksize = node->chunksize - sizerequest - HEADERSIZE,
+        newnode->isfree = TRUE,
+        newnode->memptr = (uintptr_t) newnode + HEADERSIZE,
+        newnode->next = temp;
+
+        node->chunksize = sizerequest;
+      }
+
       return (void*) node->memptr;
-    }
-
-    else if(node->isfree){
-      /*There might be adjacent free chunks, check if sizeof them is enough*/
-      accsize += node->chunksize+HEADERSIZE;
-
-      if(firstAccNode == NULL){
-        firstAccNode = node; /*first node on "free-streak"*/
-      }
-
-      if(sizerequest <= accsize){
-        /*Accumulated enough memory, chunks in between are now garbage*/
-        firstAccNode->chunksize = accsize;
-        /*redirect next node*/
-        firstAccNode->next = node->next;
-        /*Set chunk to busy*/
-        firstAccNode->isfree = FALSE;
-        return (void*) firstAccNode->memptr;
-      }
-    }
-
-    else{ /* node is not free */
-      /*reset accsize & accnode*/
-      accsize = -HEADERSIZE;
-      firstAccNode = NULL;
     }
   }
 
   /*We are now on last chunk! HOW TO HANDLE? GO TO FUNCTION checknode()*/
   if( node->isfree && (sizerequest <= node->chunksize) ){
     /*Best case, chunk is free & big enough*/
-    /*Set chunk to busy & return pointer to memoryaddress*/
+    /*Set chunk to busy */
     node->isfree = FALSE;
+    /*create new chunk out of unused memory*/
+    if(sizerequest+HEADERSIZE < node->chunksize){
+      struct chunk *temp = node->next;
+
+
+      node->next = (struct chunk*) (node->memptr + sizerequest);
+      struct chunk *newnode = node->next;
+
+      newnode->chunksize = node->chunksize - sizerequest - HEADERSIZE,
+      newnode->isfree = TRUE,
+      newnode->memptr = (uintptr_t) newnode + HEADERSIZE,
+      newnode->next = temp;
+
+      node->chunksize = sizerequest;
+    }
     return (void*) node->memptr;
   }
 
-  else if(node->isfree){
-    /*There might be adjacent free chunks, check if sizeof them is enough*/
-    accsize += node->chunksize+HEADERSIZE;
-
-    if(firstAccNode == NULL){
-      firstAccNode = node; /*first node on "free-streak"*/
-    }
-
-    if(sizerequest <= accsize){
-      /*Accumulated enough memory, chunks in between are now garbage*/
-      firstAccNode->chunksize = accsize;
-      /*redirect next node*/
-      firstAccNode->next = node->next;
-      /*Set chunk to busy*/
-      firstAccNode->isfree = FALSE;
-      return (void*) firstAccNode->memptr;
-    }
-  }
-
-
   /*If we get here there wasn't a chunk large enough, create new ones*/
   return more_memory_please(node, sizerequest);
+}
+
+
+
+struct chunk *getchunk(uintptr_t address){
+  struct chunk *temp = MEM;
+
+  /*Checking if address is within previously allocated memory*/
+  if((address < temp->memptr) || (address > UPPERLIM))
+    return NULL; /*if not we return null*/
+
+  for(; temp->next; temp=temp->next){
+    if( (address >= temp->memptr) && (address < temp->next->memptr) ){
+      /*Address is between two adjacent nodes, belongs to first of them*/
+      return temp;
+    }
+  }
+  /*we're on last node*/
+  if((address >= temp->memptr) && (address <= UPPERLIM)){
+    return temp;
+  }
+  /*If we end up here something went wrong*/
+  return NULL;
 }
 
 
@@ -148,14 +153,14 @@ int main(){
   /*LOOK INTO NEGATIVE NUMBERS-UNSIGNED, INCLUDES LARGE CHUNKS...*/
   // void *t1 = myalloc(INTPTR_MAX-17);
   // printf("Test1: sz=-4, p=%p\n", t1);
-  void *t2 = myalloc(0);
-  printf("Test2: sz=0, p=%p\n", t2);
+  // void *t2 = myalloc(0);
+  // printf("Test2: sz=0, p=%p\n", t2);
   void *t3 = myalloc(1);
-  printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
+  // printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
   //
-  //
-  // char *str;
-  // str = (char*) myalloc(6);
+
+  char *str;
+  str = (char*) myalloc(6);
   // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
   //
   // *str = 'h';
@@ -166,23 +171,28 @@ int main(){
   // *(str+5) = '\0';
 
   int *ip = (int*) myalloc(31);
+  struct chunk *t = getchunk((uintptr_t)ip);
+  printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
 
-  // double *dp = (double*) myalloc(100);
-  //
-  // void *vp = myalloc(150);
+  double *dp = (double*) myalloc(100);
+
+  void *vp = myalloc(150);
   // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
-  printf("Test5: allocated multiple pointers within chunks, ip=%p\n", ip);
+  // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
+  void *vpn = myalloc(37);
+  if(t = getchunk(INTPTR_MAX))
+    printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+
+  void *vpn2 = myalloc(1024);
 
   fprintMemory("memoryprint.txt");
 
   mergechunks();
   fprintMemory("merged.txt");
 
-
+  printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
   return 0;
 }
-
-
 
 /* Clear and Allocate memory,
   n=number of items
@@ -196,37 +206,18 @@ void *calloc(size_t n, size_t sz){
   if((vp = myalloc(membytes)) == NULL){
     return NULL;
   }
-
+  // struct chunk *t;
+  // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
 
   /*clear all memory cells*/
   long *tp = (long*) vp;
   for(int i = 0; i<(membytes/sizeof(long)); i++){
+    // printf("pre: %ld, post: ", *(tp+i));
     *(tp+i) = 0;
+    // printf("%ld\n", *(tp+i));
   }
 
   return vp;
-}
-
-
-
-struct chunk *getchunk(uintptr_t address){
-  struct chunk *temp = MEM;
-  /*Checking if address is within previously allocated memory*/
-  if(address < temp->memptr || address > UPPERLIM)
-    return NULL; /*if not we return null*/
-
-  for(; temp->next; temp=temp->next){
-    if( (address >= temp->memptr) && (address < temp->next->memptr) ){
-      /*Address is between two adjacent nodes, belongs to first of them*/
-      return temp;
-    }
-  }
-  /*we're on last node*/
-  if((address >= temp->memptr) && (address <= UPPERLIM)){
-    return temp;
-  }
-  /*We can't end up here*/
-  printf("I misspoke...\n");
 }
 
 

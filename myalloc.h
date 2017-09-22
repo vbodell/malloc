@@ -29,7 +29,7 @@ static uintptr_t BREAK = 0;
 static uintptr_t UPPERLIM = 0;
 
 /* A big piece is a CAKE, which we turn into chunks (Pizza-slice?)*/
-#define CAKESIZE 512
+#define CAKESIZE 2048
 
 /*Define sbrk(2) error-value*/
 #define SBRKERR (struct chunk*)-1
@@ -42,7 +42,6 @@ static uintptr_t UPPERLIM = 0;
 
 void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
   struct chunk *newbreak;
-
   uintptr_t memrequest = (sizerequest+HEADERSIZE) > CAKESIZE ?
           sizerequest+HEADERSIZE : CAKESIZE;
   if((newbreak = (struct chunk*) sbrk(memrequest)) == SBRKERR){
@@ -72,6 +71,7 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
   else{ /*We have traversed linked list already*/
     node->next = newbreak;
   }
+
 
 
   struct chunk *t = newbreak;
