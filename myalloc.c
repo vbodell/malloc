@@ -43,6 +43,30 @@ void mergechunks(){
 }
 
 
+/*Gets the chunk specified from address
+returns null if address is not amongst chunks*/
+struct chunk *getchunk(uintptr_t address){
+  struct chunk *temp = MEM;
+
+  /*Checking if address is within previously allocated memory*/
+  if((address < temp->memptr) || (address > UPPERLIM))
+    return NULL; /*if not we return null*/
+
+  for(; temp->next; temp=temp->next){
+    if( (address >= temp->memptr) && (address < temp->next->memptr) ){
+      /*Address is between two adjacent nodes, belongs to first of them*/
+      return temp;
+    }
+  }
+  /*we're on last node*/
+  if((address >= temp->memptr) && (address <= UPPERLIM)){
+    return temp;
+  }
+  /*If we end up here something went wrong*/
+  return NULL;
+}
+
+
 /*Okay, so now this should return some memory, but sbrk2 should probably
 be modified to correctly address where headers are put...*/
 void *myalloc(size_t sizerequest){
@@ -68,7 +92,7 @@ void *myalloc(size_t sizerequest){
   for(node = MEM; node->next != NULL; node = node->next){
 
     /*Checking node could be a funct w/ params:
-    node, sizerequest, &accsize, firstAccNode*/
+    node, sizerequest, ??*/
 
 
     if( node->isfree && (sizerequest <= node->chunksize) ){
@@ -123,28 +147,6 @@ void *myalloc(size_t sizerequest){
 }
 
 
-/*Gets the chunk specified from address
-returns null if address is not amongst chunks*/
-struct chunk *getchunk(uintptr_t address){
-  struct chunk *temp = MEM;
-
-  /*Checking if address is within previously allocated memory*/
-  if((address < temp->memptr) || (address > UPPERLIM))
-    return NULL; /*if not we return null*/
-
-  for(; temp->next; temp=temp->next){
-    if( (address >= temp->memptr) && (address < temp->next->memptr) ){
-      /*Address is between two adjacent nodes, belongs to first of them*/
-      return temp;
-    }
-  }
-  /*we're on last node*/
-  if((address >= temp->memptr) && (address <= UPPERLIM)){
-    return temp;
-  }
-  /*If we end up here something went wrong*/
-  return NULL;
-}
 
 
 
@@ -168,6 +170,7 @@ void free(void *ptr){
 
   return;
 }
+
 
 
 int main(){
@@ -211,12 +214,15 @@ int main(){
 
   free(str);
   free(t3);
+  free(ip);
   // mergechunks();
   fprintMemory("merged.txt");
 
   printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
   return 0;
 }
+
+
 
 
 
@@ -245,9 +251,6 @@ void *calloc(size_t n, size_t sz){
 
   return vp;
 }
-
-
-
 
 
 
