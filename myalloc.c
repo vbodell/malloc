@@ -19,6 +19,27 @@ First release: TBA
 #define ALIGNER 16 /*To make sure memory is in alignment*/
 
 
+
+/*Shrink chunk c and create new chunk out of remaining*/
+void shrink(struct chunk *c, size_t sizerequest){
+  if(c->chunksize <= sizerequest){
+    /*request invalid*/
+    return;
+  }
+  if( (c->chunksize-sizerequest) > HEADERSIZE ){ /*We can fit new chunk*/
+    struct chunk *temp = c->next;
+    c->next = (struct chunk*) (c->memptr + sizerequest);
+    struct chunk *nc = c->next;
+
+    nc->chunksize = c->chunksize - sizerequest - HEADERSIZE,
+    nc->isfree = TRUE,
+    nc->memptr = (uintptr_t) nc + HEADERSIZE,
+    nc->next = temp;
+    c->chunksize = sizerequest;
+  }
+}
+
+
 /*Okay, so now this should return some memory when asked for*/
 void *myalloc(size_t sizerequest){
   if(sizerequest == 0 || sizerequest > (BIGGESTREQUEST)){
@@ -51,20 +72,7 @@ void *myalloc(size_t sizerequest){
       /*Set chunk to busy */
       node->isfree = FALSE;
       /*create new chunk out of unused memory*/
-      if(sizerequest+HEADERSIZE < node->chunksize){
-        struct chunk *temp = node->next;
-
-
-        node->next = (struct chunk*) (node->memptr + sizerequest);
-        struct chunk *newnode = node->next;
-
-        newnode->chunksize = node->chunksize - sizerequest - HEADERSIZE,
-        newnode->isfree = TRUE,
-        newnode->memptr = (uintptr_t) newnode + HEADERSIZE,
-        newnode->next = temp;
-
-        node->chunksize = sizerequest;
-      }
+      shrink(node, sizerequest);
 
       return (void*) node->memptr;
     }
@@ -76,20 +84,8 @@ void *myalloc(size_t sizerequest){
     /*Set chunk to busy */
     node->isfree = FALSE;
     /*create new chunk out of unused memory*/
-    if(sizerequest+HEADERSIZE < node->chunksize){
-      struct chunk *temp = node->next;
+    shrink(node, sizerequest);
 
-
-      node->next = (struct chunk*) (node->memptr + sizerequest);
-      struct chunk *newnode = node->next;
-
-      newnode->chunksize = node->chunksize - sizerequest - HEADERSIZE,
-      newnode->isfree = TRUE,
-      newnode->memptr = (uintptr_t) newnode + HEADERSIZE,
-      newnode->next = temp;
-
-      node->chunksize = sizerequest;
-    }
     return (void*) node->memptr;
   }
 
@@ -151,63 +147,14 @@ void *calloc(size_t n, size_t sz){
 
 
 int main(){
-
-  /*LOOK INTO NEGATIVE NUMBERS-UNSIGNED, INCLUDES LARGE CHUNKS...*/
-  // void *t1 = myalloc(INTPTR_MAX-17);
-  // printf("Test1: sz=-4, p=%p\n", t1);
-  // void *t2 = myalloc(0);
-  // printf("Test2: sz=0, p=%p\n", t2);
-  // void *t3 = myalloc(1);
-  // printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
-  //
-
-  char *str;
-  str = (char*) myalloc(400);
-  // int *tp = str;
-  // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
-  //
-  *str = 'h';
-  *(str+1) = 'e';
-  *(str+2) = 'l';
-  *(str+3) = 'l';
-  *(str+4) = 'o';
-  *(str+5) = '\0';
-
-  printf("\n%s, %p\n\n", str, str);
-
-  int *ip = (int*) myalloc(31);
-  struct chunk *t = getchunk((uintptr_t)ip);
-  printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-
-  double *dp = (double*) myalloc(100);
-
-  void *vp = myalloc(150);
-  printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
-  // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
-  void *vpn = myalloc(37);
-  uintptr_t req = (uintptr_t)vpn + 48+HEADERSIZE;
-  printf("%p\n", req);
-  if((t = getchunk(req)))
-    printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-
-  fprintMemory("before.txt");
-  void *vpn2 = myalloc(1024);
-
-  fprintMemory("memoryprint.txt");
-
-  free(str);
-  free(dp);
-  free(vp);
-  free(ip);
-  // mergechunks();
-  fprintMemory("merged.txt");
-
-  printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
   return 0;
 }
 
 
 
+
+
+/*--------------------REALLOC----------------------------------*/
 
 
 /*Attempts to merge adjacent chunks starting from c
@@ -247,26 +194,6 @@ char attemptmerge(struct chunk* c, size_t sizerequest){
   }
   /*Adjacent chunks were not sufficient*/
   return FALSE;
-}
-
-
-/*Shrink chunk c and create new chunk out of remaining*/
-void shrink(struct chunk *c, size_t sizerequest){
-  if(c->chunksize <= sizerequest){
-    /*request invalid*/
-    return;
-  }
-  if( (c->chunksize-sizerequest) > HEADERSIZE ){ /*We can fit new chunk*/
-    struct chunk *temp = c->next;
-    c->next = (struct chunk*) (c->memptr + sizerequest);
-    struct chunk *nc = c->next;
-
-    nc->chunksize = c->chunksize - sizerequest - HEADERSIZE,
-    nc->isfree = TRUE,
-    nc->memptr = (uintptr_t) nc + HEADERSIZE,
-    nc->next = temp;
-    c->chunksize = sizerequest;
-  }
 }
 
 
