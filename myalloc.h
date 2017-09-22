@@ -1,3 +1,14 @@
+/******************************************************************************
+myalloc.h
+homemade malloc substitute, header file containing syscall & data structure
+
+Author: Victor Bodell
+
+******************************************************************************/
+
+
+/*----------------CHUNKS-------------------*/
+
 /* DATA STRUCTURE FOR MEMORY CHUNKS
 size: contains sizeof memory-map (exluding sizeof chunk)
 isfree: is chunk of memory free to use?
@@ -10,17 +21,23 @@ struct chunk{
   struct chunk *next;
 };
 
-#define ALIGNER 16
+#define ALIGNER 16 /*To make sure memory is in alignment*/
 
 /* Roundup to next multiple of 16 if size of chunk is not already */
 static int roundup = ALIGNER -
         ((sizeof(struct chunk) % ALIGNER) ?
               sizeof(struct chunk) % ALIGNER : ALIGNER);
+
 /*Define size of chunk header*/
 #define HEADERSIZE (sizeof(struct chunk) + roundup)
 
 //declare memory buffer, HOW TO initialize??
 static struct chunk *MEM;
+
+
+/*----------------CHUNKS--END------------------*/
+
+/*-----------CORE-MEMORY-PARAMS---------------*/
 
 /*Lowest break*/
 static uintptr_t BREAK = 0;
@@ -33,6 +50,9 @@ static uintptr_t UPPERLIM = 0;
 
 /*Define sbrk(2) error-value*/
 #define SBRKERR (struct chunk*)-1
+
+/*-----------CORE-MEMORY-PARAMS--END--------------*/
+
 
 /*To improve readability*/
 #define TRUE 1
@@ -126,7 +146,7 @@ void mergechunks(){
 /*Gets the chunk specified from address
 returns null if address is not amongst chunks*/
 struct chunk *getchunk(uintptr_t address){
-  struct chunk *temp = MEM;
+  struct chunk *temp = MEM; /*chunk* for traversing*/
 
   /*Checking if address is within previously allocated memory*/
   if((address < temp->memptr) || (address > UPPERLIM))
@@ -138,16 +158,18 @@ struct chunk *getchunk(uintptr_t address){
       return temp;
     }
   }
+
   /*we're on last node*/
   if((address >= temp->memptr) && (address <= UPPERLIM)){
     return temp;
   }
+
   /*If we end up here address specified was in a HEADER, wrong argument*/
   return NULL;
 }
 
 
-
+/*A function to print information about malloc memory*/
 void fprintMemory(char * fname)
 {
   FILE *fp;
@@ -159,14 +181,14 @@ void fprintMemory(char * fname)
 
   while(t->next){
 
-    sprintf(str1, "Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+    sprintf(str1, "Chunk: {sz=%lu, free=%d, &mem=%lx, &next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
     fputs(str1, fp);
 
     t = t->next;
   }
   /*t now points to the last node in the chain but we have not printed it.*/
 
-  sprintf(str1, "Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+  sprintf(str1, "Chunk: {sz=%lu, free=%d, &mem=%lx, &next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
   fputs(str1, fp);
   fclose(fp);
 }
