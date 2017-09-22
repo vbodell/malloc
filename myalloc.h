@@ -40,11 +40,11 @@ static uintptr_t UPPERLIM = 0;
 
 
 
-void *more_memory_please(struct chunk *node, size_t sizerequest){
+void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
   struct chunk *newbreak;
-
   
-  if((newbreak = (struct chunk*) sbrk(CAKESIZE)) == SBRKERR){
+  uintptr_t memrequest = sizerequest > CAKESIZE ? sizerequest : CAKESIZE;
+  if((newbreak = (struct chunk*) sbrk(memrequest)) == SBRKERR){
     /*sbrk(2) failed*/
     errno = ENOMEM;
     return NULL;
@@ -54,7 +54,7 @@ void *more_memory_please(struct chunk *node, size_t sizerequest){
   if(!BREAK)
     BREAK = (uintptr_t) newbreak;
 
-  UPPERLIM = (uintptr_t) newbreak + CAKESIZE;
+  UPPERLIM = (uintptr_t) newbreak + memrequest;
   /*current address for user memory & header (only offset is header)*/
   uintptr_t current_user_memory = (uintptr_t) newbreak+HEADERSIZE;
   uintptr_t current_header = (uintptr_t) newbreak;
@@ -81,31 +81,6 @@ void *more_memory_please(struct chunk *node, size_t sizerequest){
   current_user_memory += chunk_tot_sz;
   current_header += chunk_tot_sz;
 
-  int i;
-
-
-  /*HOW TO ASSIGN CHUNKS?? IMPROVE FORMULA!!*/
-  /*Should probably just make next chunk out of remnant, let malloc do the rest*/
-  for(i = 1; (current_user_memory+ALIGNER*i+HEADERSIZE) < UPPERLIM; i++){
-    i = (i%129); /*Maximum chunksize will be 128*16=2048 bytes*/
-    int thissize = ALIGNER*i;
-    chunk_tot_sz = HEADERSIZE + thissize;
-
-    /*Set address for next, and move to it for initialization*/
-    temp->next = (struct chunk*) current_header;
-    temp = temp->next;
-    /*move to next header*/
-    current_header += chunk_tot_sz;
-
-    /*Give chunk memorysize, set free=TRUE, pointer=current_user_memory+header+sizerequest, */
-    temp->chunksize = thissize,
-    temp->isfree = TRUE,
-    temp->memptr = current_user_memory;
-
-    /*Increment current_user_memory to next address for user-memory*/
-    current_user_memory += chunk_tot_sz;
-  }
-
 
   uintptr_t remaining_CAKE = UPPERLIM - current_user_memory;
   if(remaining_CAKE){/*Create chunk out of remaining memoryspace*/
@@ -118,6 +93,29 @@ void *more_memory_please(struct chunk *node, size_t sizerequest){
 
     /*no need to increment traverse variables since we are done*/
   }
+
+
+  /*HOW TO ASSIGN CHUNKS?? IMPROVE FORMULA!!*/
+  /*Should probably just make next chunk out of remnant, let malloc do the rest*/
+  // for(i = 1; (current_user_memory+ALIGNER*i+HEADERSIZE) < UPPERLIM; i++){
+  //   i = (i%129); /*Maximum chunksize will be 128*16=2048 bytes*/
+  //   int thissize = ALIGNER*i;
+  //   chunk_tot_sz = HEADERSIZE + thissize;
+  //
+  //   /*Set address for next, and move to it for initialization*/
+  //   temp->next = (struct chunk*) current_header;
+  //   temp = temp->next;
+  //   /*move to next header*/
+  //   current_header += chunk_tot_sz;
+  //
+  //   /*Give chunk memorysize, set free=TRUE, pointer=current_user_memory+header+sizerequest, */
+  //   temp->chunksize = thissize,
+  //   temp->isfree = TRUE,
+  //   temp->memptr = current_user_memory;
+  //
+  //   /*Increment current_user_memory to next address for user-memory*/
+  //   current_user_memory += chunk_tot_sz;
+  // }
 
 
   return (void*) newbreak->memptr;

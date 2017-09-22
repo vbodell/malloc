@@ -14,7 +14,7 @@ First working version: TBA
 #include <unistd.h> /* For syscall declarations */
 #include "myalloc.h"
 
-
+#define MAXSIZEREQ (uintptr_t) -16
 
 void mergechunks(){
   /*Traverse and merge adjacent free chunks*/
@@ -46,14 +46,15 @@ void mergechunks(){
 /*Okay, so now this should return some memory, but sbrk2 should probably
 be modified to correctly address where headers are put...*/
 void *myalloc(size_t sizerequest){
-  if(sizerequest <= 0){
-    /*Nothing to allocate*/
+  if(sizerequest == 0 || sizerequest > (INTPTR_MAX-ALIGNER)){
+    /*Nothing to allocate, or request to big*/
     return NULL;
   }
 
   /* round size to closest multiple of 16 */
   if(sizerequest % ALIGNER){
     sizerequest = sizerequest + ALIGNER - (sizerequest % ALIGNER);
+    printf("size aligned: %lu\n", sizerequest);
   }
 
 
@@ -143,17 +144,35 @@ void *myalloc(size_t sizerequest){
 
 
 int main(){
-  char *str;
-  str = (char*) myalloc(6);
 
-  *str = 'h';
-  *(str+1) = 'e';
-  *(str+2) = 'l';
-  *(str+3) = 'l';
-  *(str+4) = 'o';
-  *(str+5) = '\0';
+  /*LOOK INTO NEGATIVE NUMBERS-UNSIGNED, INCLUDES LARGE CHUNKS...*/
+  // void *t1 = myalloc(INTPTR_MAX-17);
+  // printf("Test1: sz=-4, p=%p\n", t1);
+  void *t2 = myalloc(0);
+  printf("Test2: sz=0, p=%p\n", t2);
+  void *t3 = myalloc(1);
+  printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
+  //
+  //
+  // char *str;
+  // str = (char*) myalloc(6);
+  // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
+  //
+  // *str = 'h';
+  // *(str+1) = 'e';
+  // *(str+2) = 'l';
+  // *(str+3) = 'l';
+  // *(str+4) = 'o';
+  // *(str+5) = '\0';
 
-  printf("str=%s, adr=%p\n", str, str);
+  int *ip = (int*) myalloc(31);
+
+  // double *dp = (double*) myalloc(100);
+  //
+  // void *vp = myalloc(150);
+  // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
+  printf("Test5: allocated multiple pointers within chunks, ip=%p\n", ip);
+
   fprintMemory("memoryprint.txt");
 
   mergechunks();
