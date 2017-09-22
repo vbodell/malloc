@@ -1,10 +1,10 @@
 /******************************************************************************
 myalloc.c
-homemade malloc substitute
+homemade, moonshined, malloc substitute
 
 Author: Victor Bodell
 Started on: 09/20/2017
-First working version: TBA
+First release: TBA
 
 ******************************************************************************/
 
@@ -14,21 +14,21 @@ First working version: TBA
 #include <unistd.h> /* For syscall declarations */
 #include "myalloc.h"
 
+#define BIGGESTREQUEST INTPTR_MAX-ALIGNER-HEADERSIZE
+
+#define ALIGNER 16 /*To make sure memory is in alignment*/
 
 
-
-
-/*Okay, so now this should return some memory, but sbrk2 should probably
-be modified to correctly address where headers are put...*/
+/*Okay, so now this should return some memory when asked for*/
 void *myalloc(size_t sizerequest){
-  if(sizerequest == 0 || sizerequest > (INTPTR_MAX-ALIGNER-HEADERSIZE)){
+  if(sizerequest == 0 || sizerequest > (BIGGESTREQUEST)){
     /*Nothing to allocate, or request to big*/
     return NULL;
   }
 
   /* round size to closest multiple of 16 */
   if(sizerequest % ALIGNER){
-    sizerequest = sizerequest + ALIGNER - (sizerequest % ALIGNER);
+    sizerequest += ALIGNER - (sizerequest % ALIGNER);
     printf("size aligned: %lu\n", sizerequest);
   }
 
@@ -210,9 +210,64 @@ int main(){
 
 
 
+/*Attempts to merge adjacent chunks starting from c
+  to make c->chunksize >= sizerequest
+  returns TRUE if successful*/
+char attemptmerge(struct chunk* c, size_t sizerequest){
+  /*If next node is free we might be able to merge to get enough memory*/
+  uintptr_t accsize = c->chunksize;
+  struct chunk *t = c->next;
+
+  /*merging for as long as possible*/
+  while(t->next && t->next->isfree){
+    /*If adjacent node is free we accumulate its size and header*/
+    accsize += t->chunksize+HEADERSIZE;
+
+    /*clear memory in between nodes and expand memory of original chunk*/
+    c->next = t->next;
+    c->chunksize = accsize;
+
+    if(accsize >= sizerequest){
+      /*Bingo, merged so that adjacent cells are free*/
+      /*Return original chunk now expanded*/
+      return TRUE;
+    }
+    t = t->next;
+  }
+  /*We are on final node which still might work*/
+  if(t->isfree){
+    accsize += t->chunksize+HEADERSIZE;
+    /*c is now last in chain*/
+    c->next = NULL;
+    c->chunksize = accsize;
+
+    if(accsize >= sizerequest){
+      return TRUE;
+    }
+  }
+  /*Adjacent chunks were not sufficient*/
+  return FALSE;
+}
 
 
+/*Shrink chunk c and create new chunk out of remaining*/
+void shrink(struct chunk *c, size_t sizerequest){
+  if(c->chunksize <= sizerequest){
+    /*request invalid*/
+    return;
+  }
+  if( (c->chunksize-sizerequest) > HEADERSIZE ){ /*We can fit new chunk*/
+    struct chunk *temp = c->next;
+    c->next = (struct chunk*) (c->memptr + sizerequest);
+    struct chunk *nc = c->next;
 
+    nc->chunksize = c->chunksize - sizerequest - HEADERSIZE,
+    nc->isfree = TRUE,
+    nc->memptr = (uintptr_t) nc + HEADERSIZE,
+    nc->next = temp;
+    c->chunksize = sizerequest;
+  }
+}
 
 
 
@@ -232,49 +287,25 @@ void *realloc(void *ptr, size_t sizerequest){
     return NULL; /*Memory could not be found in allocation*/
   }
 
-  /*If we can fit memory in current chunk, just return the pointer*/
-  /*HOW ABOUT SHRINKING??*/
+  /* round size to closest multiple of 16 */
+  if(sizerequest % ALIGNER){
+    sizerequest += ALIGNER - (sizerequest % ALIGNER);
+  }
+
+  /*If we can fit memory in current chunk, shrink & return the pointer*/
   if(c->chunksize > sizerequest){
     /*Just making sure address was allocated by malloc/calloc/realloc*/
-    if(!(c->isfree)){
-      return (void*) c->memptr;
+    if(c->isfree){
+      return NULL; /*memory was not allocated by malloc!*/
     }
-    else{/*memory was not allocated by malloc!*/
-      return NULL;
-    }
+    /*release the memory we might not need*/
+    // shrink(c, sizerequest);
+    return (void*) c->memptr;
   }
   else if(c->next && c->next->isfree){
-
-    /*If next node is free we might be able to merge to get enough memory*/
-    uintptr_t accsize = c->chunksize;
-    struct chunk *t = c->next;
-
-    /*merging for as long as possible*/
-    while(t->next && t->next->isfree){
-      /*If adjacent node is free we accumulate its size and header*/
-      accsize += t->chunksize+HEADERSIZE;
-
-      /*clear memory in between nodes and expand memory of original chunk*/
-      c->next = t->next;
-      c->chunksize = accsize;
-
-      if(accsize >= sizerequest){
-        /*Bingo, merged so that adjacent cells are free*/
-        /*Return original chunk now expanded*/
-        return (void *) c->memptr;
-      }
-      t = t->next;
-    }
-    /*We are on final node which still might work*/
-    if(t->isfree){
-      accsize += t->chunksize+HEADERSIZE;
-      /*c is now last in chain*/
-      c->next = NULL;
-      c->chunksize = accsize;
-
-      if(accsize >= sizerequest){
-        return (void *) c->memptr;
-      }
+    /*If successful, return original memoryspace*/
+    if(attemptmerge(c, sizerequest)){
+      return (void*) c->memptr;
     }
   }
 
@@ -285,12 +316,14 @@ void *realloc(void *ptr, size_t sizerequest){
     return NULL;
   }
   /*define pointers for copying*/
-  long *copy = (long *) c->memptr;
-  long *paste = (long *) vp;
+  int *copy = (int *) c->memptr;
+  int *paste = (int *) vp;
 
-  for(int i = 0; i < (sizerequest/sizeof(long)); i++){
+  for(int i = 0; i < (sizerequest/sizeof(int)); i++){
     *(paste+i) = *(copy+i);
   }
+  /*Finally, set original ptr free*/
+  free(ptr);
   /*vp now contains original memory*/
   return vp;
 
