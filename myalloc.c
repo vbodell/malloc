@@ -16,6 +16,32 @@ First working version: TBA
 
 
 
+void mergechunks(){
+  /*Traverse and merge adjacent free chunks*/
+  struct chunk *t;
+
+  for(t = MEM; t->next; t=t->next){
+    /*If current chunk is free we can start merging*/
+    if(t->isfree){
+      struct chunk *temp = t->next;
+
+      while(temp && temp->isfree){
+        /*If there is a next chunk that also happens to be free*/
+        // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", temp->chunksize, temp->isfree, temp->memptr, temp->next);
+        t->chunksize += temp->chunksize+HEADERSIZE; /*increment size of first*/
+        t->next = temp->next; /*remove temp from chain (now part of memoryblock)*/
+        temp = temp->next; /*Move to adjacent free chunk*/
+        // printf("%p\n", temp);
+      }
+    }
+    /*while merging we might be on last node, thus we must break forloop*/
+    if(t->next == NULL)
+      break;
+    /*We have now merged all we can, move to next node*/
+  }
+  return;
+}
+
 
 /*Okay, so now this should return some memory, but sbrk2 should probably
 be modified to correctly address where headers are put...*/
@@ -128,7 +154,11 @@ int main(){
   *(str+5) = '\0';
 
   printf("str=%s, adr=%p\n", str, str);
-  fprintMemory();
+  fprintMemory("memoryprint.txt");
+
+  mergechunks();
+  fprintMemory("merged.txt");
+
 
   return 0;
 }
@@ -241,6 +271,7 @@ void *realloc(void *ptr, size_t sizerequest){
   }
 
   /*If we can fit memory in current chunk, just return the pointer*/
+  /*HOW ABOUT SHRINKING??*/
   if(c->chunksize > sizerequest){
     /*Just making sure address was allocated by malloc/calloc/realloc*/
     if(!(c->isfree)){
@@ -258,7 +289,8 @@ void *realloc(void *ptr, size_t sizerequest){
 
     /*merging for as long as possible*/
     while(t->next && t->next->isfree){
-      accsize += t->chunksize;
+      /*If adjacent node is free we accumulate its size and header*/
+      accsize += t->chunksize+HEADERSIZE;
 
       /*clear memory in between nodes and expand memory of original chunk*/
       c->next = t->next;
@@ -273,8 +305,9 @@ void *realloc(void *ptr, size_t sizerequest){
     }
     /*We are on final node which still might work*/
     if(t->isfree){
-      accsize += t->chunksize;
-      c->next = t;
+      accsize += t->chunksize+HEADERSIZE;
+      /*c is now last in chain*/
+      c->next = NULL;
       c->chunksize = accsize;
 
       if(accsize >= sizerequest){
