@@ -27,14 +27,18 @@ void shrink(struct chunk *c, size_t sizerequest){
     return;
   }
   if( (c->chunksize-sizerequest) > HEADERSIZE ){ /*We can fit new chunk*/
+    /*Store next in list*/
     struct chunk *temp = c->next;
+    /*let current nodes next be new node*/
     c->next = (struct chunk*) (c->memptr + sizerequest);
     struct chunk *nc = c->next;
 
+    /*Define new chunk*/
     nc->chunksize = c->chunksize - sizerequest - HEADERSIZE,
     nc->isfree = TRUE,
     nc->memptr = (uintptr_t) nc + HEADERSIZE,
     nc->next = temp;
+    /*Update shrunk size*/
     c->chunksize = sizerequest;
   }
 }
