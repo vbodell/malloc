@@ -58,11 +58,6 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
 
   /*Set current upper limit*/
   UPPERLIM = nbrkptr + memrequest;
-  printf("UL %lx\n", UPPERLIM);
-  printf("brk %p\n", newbreak);
-  printf("brk %lx\n", nbrkptr);
-  // /*current address for user memory*/
-  // uintptr_t current_user_memory = nbrkptr+HEADERSIZE;
 
   /*Correctly initialize starting chunk to correct place in memory*/
   newbreak->chunksize = sizerequest,
@@ -78,17 +73,10 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
     node->next = newbreak;
   }
 
-  // /* node used for traverse*/
-  // struct chunk *temp = newbreak;
-
-  // /*set memory pointers to next position*/
-  // uintptr_t chunk_tot_sz = memrequest + HEADERSIZE;
-  // current_user_memory += chunk_tot_sz;
 
   struct chunk *t = newbreak;
   int remaining_CAKE = UPPERLIM - (newbreak->memptr + newbreak->chunksize + HEADERSIZE);
-  printf("UL %lx mptr %lx sz %lx h %lx\n", UPPERLIM, newbreak->memptr, newbreak->chunksize, HEADERSIZE);
-  printf("RC %d\n", remaining_CAKE);
+
   if(remaining_CAKE > 0){/*Create chunk out of remaining memoryspace*/
     t->next = (struct chunk*) (newbreak->memptr + newbreak->chunksize);
     t = t->next;
@@ -100,29 +88,6 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
 
     /*no need to increment traverse variables since we are done*/
   }
-
-
-  /*HOW TO ASSIGN CHUNKS?? IMPROVE FORMULA!!*/
-  /*Should probably just make next chunk out of remnant, let malloc do the rest*/
-  // for(i = 1; (current_user_memory+ALIGNER*i+HEADERSIZE) < UPPERLIM; i++){
-  //   i = (i%129); /*Maximum chunksize will be 128*16=2048 bytes*/
-  //   int thissize = ALIGNER*i;
-  //   chunk_tot_sz = HEADERSIZE + thissize;
-  //
-  //   /*Set address for next, and move to it for initialization*/
-  //   temp->next = (struct chunk*) current_header;
-  //   temp = temp->next;
-  //   /*move to next header*/
-  //   current_header += chunk_tot_sz;
-  //
-  //   /*Give chunk memorysize, set free=TRUE, pointer=current_user_memory+header+sizerequest, */
-  //   temp->chunksize = thissize,
-  //   temp->isfree = TRUE,
-  //   temp->memptr = current_user_memory;
-  //
-  //   /*Increment current_user_memory to next address for user-memory*/
-  //   current_user_memory += chunk_tot_sz;
-  // }
 
 
   return (void*) newbreak->memptr;
