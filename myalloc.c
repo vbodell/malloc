@@ -123,7 +123,8 @@ void *myalloc(size_t sizerequest){
 }
 
 
-
+/*Gets the chunk specified from address
+returns null if address is not amongst chunks*/
 struct chunk *getchunk(uintptr_t address){
   struct chunk *temp = MEM;
 
@@ -146,6 +147,27 @@ struct chunk *getchunk(uintptr_t address){
 }
 
 
+
+void free(void *ptr){
+  if(ptr == NULL){
+    return;
+  }
+
+  /*Get which chunk/header from pointer*/
+  struct chunk *c = getchunk( (uintptr_t) ptr);
+
+  if(c == NULL){
+    return; /*Memory could not be found in allocation*/
+  }
+
+  /*Mark chunk as free*/
+  c->isfree = TRUE;
+
+  /*IF adjacent chunk is free, merge*/
+  mergechunks();
+
+  return;
+}
 
 
 int main(){
@@ -173,26 +195,30 @@ int main(){
   int *ip = (int*) myalloc(31);
   struct chunk *t = getchunk((uintptr_t)ip);
   printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-
-  double *dp = (double*) myalloc(100);
-
-  void *vp = myalloc(150);
-  // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
-  // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
-  void *vpn = myalloc(37);
-  if(t = getchunk(INTPTR_MAX))
-    printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
-
-  void *vpn2 = myalloc(1024);
+  //
+  // double *dp = (double*) myalloc(100);
+  //
+  // void *vp = myalloc(150);
+  // // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
+  // // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
+  // void *vpn = myalloc(37);
+  // if(t = getchunk(INTPTR_MAX))
+  //   printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+  //
+  // void *vpn2 = myalloc(1024);
 
   fprintMemory("memoryprint.txt");
 
-  mergechunks();
+  free(str);
+  free(t3);
+  // mergechunks();
   fprintMemory("merged.txt");
 
   printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
   return 0;
 }
+
+
 
 /* Clear and Allocate memory,
   n=number of items
@@ -222,43 +248,7 @@ void *calloc(size_t n, size_t sz){
 
 
 
-void free(void *ptr){
-  if(ptr == NULL){
-    return;
-  }
 
-  /*Get which chunk/header from pointer*/
-  struct chunk *c = getchunk( (uintptr_t) ptr);
-
-  if(c == NULL){
-    return; /*Memory could not be found in allocation*/
-  }
-
-  /*Mark chunk as free*/
-  c->isfree = TRUE;
-
-  /*IF adjacent chunk is free, include it?*/
-  //mergechunks();
-
-  return;
-
-  /*
-  each take a pointer to a block of memory allocated by malloc(3),
-  but the pointer will not necessarily be to the very first byte of region.
-  You must support this
-
-  You will have to remember to merge sections of memory if adjacent
-  ones become free.
-
-  realloc(3) must try to minimize copying. That is, it must attempt
-  in-place expansion (or shrinking) if it is possible, including merging
-  with adjacent free chunks, if any
-
-  Also, remember, if realloc(3) is called with NULL it does the same
-  thing as malloc(3), and if realloc(3) is called with a size of 0
-  and the pointer is not NULL, it’s equivalent to free(ptr)
-  */
-}
 
 
 
@@ -341,4 +331,15 @@ void *realloc(void *ptr, size_t sizerequest){
   }
   /*vp now contains original memory*/
   return vp;
+
+
+  /*
+  realloc(3) must try to minimize copying. That is, it must attempt
+  in-place expansion (or shrinking) if it is possible, including merging
+  with adjacent free chunks, if any
+
+  Also, remember, if realloc(3) is called with NULL it does the same
+  thing as malloc(3), and if realloc(3) is called with a size of 0
+  and the pointer is not NULL, it’s equivalent to free(ptr)
+  */
 }
