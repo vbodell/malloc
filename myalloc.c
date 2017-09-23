@@ -250,6 +250,7 @@ int main(){
 
 
 void *realloc(void *ptr, size_t sizerequest){
+  /*Checking parameters to determine best course of action*/
   if(ptr == NULL){
     return malloc(sizerequest);
   }
@@ -277,17 +278,16 @@ void *realloc(void *ptr, size_t sizerequest){
       return NULL; /*memory was not allocated by malloc!*/
     }
     /*release the memory we might not need*/
-    // shrink(c, sizerequest);
+    shrink(c, sizerequest);
     return (void*) c->memptr;
   }
-  else if(c->next && c->next->isfree){
-    /*If successful, return original memoryspace*/
-    if(attemptmerge(c, sizerequest)){
-      return (void*) c->memptr;
-    }
+
+  /*Chunk too small, attempt to merge w/ adjacent chunk*/
+  if(attemptmerge(c, sizerequest)){
+    return (void*) c->memptr;
   }
 
-  /*Sadly chunk was not big enough nor expandable enough, must reallocate*/
+  /*Sadly, chunk was not big enough nor expandable enough, must reallocate*/
   void *vp = malloc(sizerequest);
   if(vp == NULL){
     /*Could not allocate memory!*/
@@ -304,15 +304,4 @@ void *realloc(void *ptr, size_t sizerequest){
   free(ptr);
   /*vp now contains original memory*/
   return vp;
-
-
-  /*
-  realloc(3) must try to minimize copying. That is, it must attempt
-  in-place expansion (or shrinking) if it is possible, including merging
-  with adjacent free chunks, if any
-
-  Also, remember, if realloc(3) is called with NULL it does the same
-  thing as malloc(3), and if realloc(3) is called with a size of 0
-  and the pointer is not NULL, it’s equivalent to free(ptr)
-  */
 }
