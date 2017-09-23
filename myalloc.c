@@ -109,7 +109,7 @@ void free(void *ptr){
   /*Mark chunk as free*/
   c->isfree = TRUE;
 
-  /*IF adjacent chunk is free, merge*/
+  /*IF adjacent chunks are free, merge*/
   mergechunks();
 
   return;
@@ -140,6 +140,32 @@ void *calloc(size_t n, size_t sz){
 
   return vp;
 }
+
+
+
+/*Attempts to merge adjacent chunk starting from c
+  to make c->chunksize >= sizerequest
+  We only need to check next chunk since every call to free()
+  results in adjacent free chunks merging
+  Returns TRUE if successful*/
+char attemptmerge(struct chunk* c, size_t sizerequest){
+
+  struct chunk *t = c->next;
+  /*If next node is free we might be able to merge to get enough memory*/
+  if(t->isfree){
+    c->next = t->next;
+    c->chunksize += t->chunksize+HEADERSIZE;
+
+    if(c->chunksize >= sizerequest){
+      /*Before returning, make sure we're not wasting too much memory on user*/
+      shrink(c, sizerequest);
+      return TRUE;
+    }
+  }
+  /*Adjacent chunk was not sufficient*/
+  return FALSE;
+}
+
 
 
 int main(){
@@ -174,24 +200,41 @@ int main(){
   void *vp = malloc(150);
   printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
   // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
-  void *vpn = malloc(37);
-  uintptr_t req = (uintptr_t)vpn + 48+HEADERSIZE;
-  printf("%p\n", req);
-  if((t = getchunk(req)))
-    printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+  // void *vpn = malloc(37);
+  // uintptr_t req = (uintptr_t)vpn + 48+HEADERSIZE;
+  // printf("%p\n", req);
+  // if((t = getchunk(req)))
+  //   printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
 
   fprintMemory("before.txt");
   void *vpn2 = malloc(1024);
 
+  void *vpn3 = malloc(200);
+
   fprintMemory("memoryprint.txt");
 
-  free(str);
-  free(dp);
+  // free(str);
+  // free(dp);
   free(vp);
-  free(ip);
-  // mergechunks();
-  fprintMemory("merged.txt");
+  // free(ip);
+  struct chunk *c = getchunk((uintptr_t)vp);
+  printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", c->chunksize, c->isfree, c->memptr, c->next);
+  // attemptmerge(c, 176);
 
+
+  c = getchunk(vpn3);
+  printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", c->chunksize, c->isfree, c->memptr, c->next);
+  // if(attemptmerge(NULL, 160)){
+  //   printf("ja\n");
+  // }
+  if(attemptmerge(c, 224)){
+    printf("ja\n");
+  }
+  fprintMemory("merged.txt");
+  if(attemptmerge(c, 256)){
+    printf("ja\n");
+  }
+  fprintMemory("merag.txt");
   printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
   return 0;
 }
@@ -202,44 +245,7 @@ int main(){
 /*--------------------REALLOC----------------------------------*/
 
 
-/*Attempts to merge adjacent chunks starting from c
-  to make c->chunksize >= sizerequest
-  returns TRUE if successful*/
-char attemptmerge(struct chunk* c, size_t sizerequest){
-  /*If next node is free we might be able to merge to get enough memory*/
-  uintptr_t accsize = c->chunksize;
-  struct chunk *t = c->next;
 
-  /*merging for as long as possible*/
-  while(t->next && t->next->isfree){
-    /*If adjacent node is free we accumulate its size and header*/
-    accsize += t->chunksize+HEADERSIZE;
-
-    /*clear memory in between nodes and expand memory of original chunk*/
-    c->next = t->next;
-    c->chunksize = accsize;
-
-    if(accsize >= sizerequest){
-      /*Bingo, merged so that adjacent cells are free*/
-      /*Return original chunk now expanded*/
-      return TRUE;
-    }
-    t = t->next;
-  }
-  /*We are on final node which still might work*/
-  if(t->isfree){
-    accsize += t->chunksize+HEADERSIZE;
-    /*c is now last in chain*/
-    c->next = NULL;
-    c->chunksize = accsize;
-
-    if(accsize >= sizerequest){
-      return TRUE;
-    }
-  }
-  /*Adjacent chunks were not sufficient*/
-  return FALSE;
-}
 
 
 
