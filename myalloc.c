@@ -45,58 +45,51 @@ void shrink(struct chunk *c, size_t sizerequest){
 
 
 /*Okay, so now this should return some memory when asked for*/
-void *myalloc(size_t sizerequest){
-  if(sizerequest == 0 || sizerequest > (BIGGESTREQUEST)){
+void *malloc(size_t size){
+  if(size == 0 || size > (BIGGESTREQUEST)){
     /*Nothing to allocate, or request to big*/
     return NULL;
   }
-
   /* round size to closest multiple of 16 */
-  if(sizerequest % ALIGNER){
-    sizerequest += ALIGNER - (sizerequest % ALIGNER);
-    printf("size aligned: %lu\n", sizerequest);
+  if(size % ALIGNER){
+    size += ALIGNER - (size % ALIGNER);
   }
 
 
   /*Memory has not been initialized, get memory from kernel*/
   if(MEM == NULL){
-    return more_memory_please(MEM, sizerequest);
+    return more_memory_please(MEM, size);
   }
 
   struct chunk *node;
   /*Traverse linked list and look for (a) chunk(s) big enough*/
   for(node = MEM; node->next != NULL; node = node->next){
 
-    /*Checking node could be a funct w/ params:
-    node, sizerequest, ??*/
-
-
-    if( node->isfree && (sizerequest <= node->chunksize) ){
+    if( node->isfree && (size <= node->chunksize) ){
       /*Best case, chunk is free & big enough*/
       /*Set chunk to busy */
       node->isfree = FALSE;
       /*create new chunk out of unused memory*/
-      shrink(node, sizerequest);
+      shrink(node, size);
 
       return (void*) node->memptr;
     }
   }
 
   /*We are now on last chunk! HOW TO HANDLE? GO TO FUNCTION checknode()*/
-  if( node->isfree && (sizerequest <= node->chunksize) ){
+  if( node->isfree && (size <= node->chunksize) ){
     /*Best case, chunk is free & big enough*/
     /*Set chunk to busy */
     node->isfree = FALSE;
     /*create new chunk out of unused memory*/
-    shrink(node, sizerequest);
+    shrink(node, size);
 
     return (void*) node->memptr;
   }
 
   /*If we get here there wasn't a chunk large enough, create new ones*/
-  return more_memory_please(node, sizerequest);
+  return more_memory_please(node, size);
 }
-
 
 
 
@@ -105,7 +98,7 @@ void free(void *ptr){
   if(ptr == NULL){
     return;
   }
-
+  // fprintMemory("m.txt");
   /*Get which chunk/header from pointer*/
   struct chunk *c = getchunk( (uintptr_t) ptr);
 
@@ -135,7 +128,7 @@ void *calloc(size_t n, size_t sz){
   void *vp;
 
   /*Memory couldn't be allocated*/
-  if((vp = myalloc(membytes)) == NULL){
+  if((vp = malloc(membytes)) == NULL){
     return NULL;
   }
 
@@ -149,11 +142,59 @@ void *calloc(size_t n, size_t sz){
 }
 
 
-
 int main(){
+  // void *t1 = myalloc(INTPTR_MAX-17);
+  // printf("Test1: sz=-4, p=%p\n", t1);
+  // void *t2 = myalloc(0);
+  // printf("Test2: sz=0, p=%p\n", t2);
+  // void *t3 = myalloc(1);
+  // printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
+  //
+
+  char *str;
+  str = (char*) malloc(400);
+  // int *tp = str;
+  // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
+  //
+  *str = 'h';
+  *(str+1) = 'e';
+  *(str+2) = 'l';
+  *(str+3) = 'l';
+  *(str+4) = 'o';
+  *(str+5) = '\0';
+
+  printf("\n%s, %p\n\n", str, str);
+
+  int *ip = (int*) malloc(31);
+  struct chunk *t = getchunk((uintptr_t)ip);
+  printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+
+  double *dp = (double*) malloc(100);
+
+  void *vp = malloc(150);
+  printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
+  // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
+  void *vpn = malloc(37);
+  uintptr_t req = (uintptr_t)vpn + 48+HEADERSIZE;
+  printf("%p\n", req);
+  if((t = getchunk(req)))
+    printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+
+  fprintMemory("before.txt");
+  void *vpn2 = malloc(1024);
+
+  fprintMemory("memoryprint.txt");
+
+  free(str);
+  free(dp);
+  free(vp);
+  free(ip);
+  // mergechunks();
+  fprintMemory("merged.txt");
+
+  printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
   return 0;
 }
-
 
 
 
@@ -204,7 +245,7 @@ char attemptmerge(struct chunk* c, size_t sizerequest){
 
 void *realloc(void *ptr, size_t sizerequest){
   if(ptr == NULL){
-    return myalloc(sizerequest);
+    return malloc(sizerequest);
   }
   else if(sizerequest == 0){
     free(ptr);
@@ -241,7 +282,7 @@ void *realloc(void *ptr, size_t sizerequest){
   }
 
   /*Sadly chunk was not big enough nor expandable enough, must reallocate*/
-  void *vp = myalloc(sizerequest);
+  void *vp = malloc(sizerequest);
   if(vp == NULL){
     /*Could not allocate memory!*/
     return NULL;
