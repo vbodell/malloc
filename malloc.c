@@ -1,5 +1,5 @@
 /******************************************************************************
-myalloc.c
+malloc.c
 homemade, moonshined, malloc substitute
 
 Author: Victor Bodell
@@ -8,11 +8,12 @@ First release: TBA
 
 ******************************************************************************/
 
+
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h> /* For error handling, including EXIT_FAILURE */
 #include <unistd.h> /* For syscall declarations */
-#include "myalloc.h"
+#include "malloc.h"
 
 #define BIGGESTREQUEST INTPTR_MAX-ALIGNER-HEADERSIZE
 
@@ -108,7 +109,7 @@ void free(void *ptr){
   /*Mark chunk as free*/
   c->isfree = TRUE;
 
-  /*IF adjacent chunks are free, merge*/
+  /*IF adjacent chunk free, merge*/
   mergechunks();
 
   return;
@@ -133,7 +134,8 @@ void *calloc(size_t n, size_t sz){
 
   /*clear all memory cells*/
   int *tp = (int*) vp;
-  for(int i = 0; i<(membytes/sizeof(int)); i++){
+  int i;
+  for(i = 0; i<(membytes/sizeof(int)); i++){
     *(tp+i) = 0;
   }
 
@@ -141,8 +143,10 @@ void *calloc(size_t n, size_t sz){
 }
 
 
+/*--------------------REALLOC----------------------------------*/
 
-/*Attempts to merge adjacent chunk starting from c
+
+/*Attempts to merge adjacent chunks starting from c
   to make c->chunksize >= sizerequest
   We only need to check next chunk since every call to free()
   results in adjacent free chunks merging
@@ -223,8 +227,8 @@ void *realloc(void *ptr, size_t sizerequest){
   /*Copy Memory to new location*/
   int *copy = (int *) c->memptr;
   int *paste = (int *) vp;
-
-  for(int i = 0; i < (sizerequest/sizeof(int)); i++){
+  int i;
+  for(i = 0; i < (sizerequest/sizeof(int)); i++){
     *(paste+i) = *(copy+i);
   }
 
