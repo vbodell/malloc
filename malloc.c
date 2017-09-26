@@ -1,10 +1,12 @@
 /******************************************************************************
 malloc.c
 homemade, moonshined, malloc substitute
+Contains the functions malloc, free, calloc & realloc respectively
+Helper-functions and datastructure found in header-file, malloc.h
 
 Author: Victor Bodell
 Started on: 09/20/2017
-First release: TBA
+First release: 09/25/2017
 
 ******************************************************************************/
 
@@ -21,6 +23,7 @@ First release: TBA
 
 #define ALIGNER 16 /*To make sure memory is in alignment*/
 
+#define BUF_SZ 70
 
 static char firstRun = TRUE;
 static char DEBUG = FALSE;
@@ -33,15 +36,16 @@ void *malloc(size_t size){
     if(getenv("DEBUG_MALLOC")){
       DEBUG = TRUE;
     }
+    firstRun=FALSE;
   }
 
   if(size == 0 || size > (BIGGESTREQUEST)){
     /*Nothing to allocate, or request to big*/
     if(DEBUG){
-      char str[60];
-      snprintf(str, 60, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
         size, NULL, 0);
-      write(0, str, 60);
+      puts(str);
     }
     return NULL;
   }
@@ -55,9 +59,9 @@ void *malloc(size_t size){
   if(MEM == NULL){
     void *ptr = more_memory_please(MEM, alignedSize);
     if(DEBUG){
-      char str[60];
+      char str[BUF_SZ];
       struct chunk *t = getchunk((uintptr_t)ptr);
-      snprintf(str, 60, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
+      snprintf(str, BUF_SZ, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
         size, ptr, (int) t->chunksize);
       puts(str);
     }
@@ -76,10 +80,8 @@ void *malloc(size_t size){
       shrink(node, alignedSize);
 
       if(DEBUG){
-        printf("MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
-          size, (void *)node->memptr, (int) node->chunksize);
-        char str[60];
-        snprintf(str, 60, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
+        char str[BUF_SZ];
+        snprintf(str, BUF_SZ, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
           size, (void *)node->memptr, (int) node->chunksize);
         puts(str);
       }
@@ -97,8 +99,8 @@ void *malloc(size_t size){
     shrink(node, alignedSize);
 
     if(DEBUG){
-      char str[60];
-      snprintf(str, 60, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
         size, (void*) node->memptr, (int) node->chunksize);
       puts(str);
     }
@@ -108,9 +110,9 @@ void *malloc(size_t size){
   void *ptr = more_memory_please(node, alignedSize);
 
   if(DEBUG){
-    char str[60];
+    char str[BUF_SZ];
     struct chunk *t = getchunk((uintptr_t)ptr);
-    snprintf(str, 60, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
+    snprintf(str, BUF_SZ, "MALLOC: malloc(%lu) => (ptr=%p, size=%d)",
       size, ptr, (int) t->chunksize);
     puts(str);
   }
@@ -126,11 +128,10 @@ void free(void *ptr){
     return;
   }
   if(DEBUG){
-    char str[60];
-    snprintf(str, 60, "MALLOC: free(%p)", ptr);
+    char str[BUF_SZ];
+    snprintf(str, BUF_SZ, "MALLOC: free(%p)", ptr);
     puts(str);
   }
-  // fprintMemory("m.txt");
   /*Get which chunk/header from pointer*/
   struct chunk *c = getchunk( (uintptr_t) ptr);
 
@@ -150,7 +151,6 @@ void free(void *ptr){
 
 
 
-
 /* Clear and Allocate memory,
   n=number of items
   sz=size of item
@@ -162,8 +162,8 @@ void *calloc(size_t n, size_t sz){
   /*Memory couldn't be allocated*/
   if((vp = malloc(membytes)) == NULL){
     if(DEBUG){
-      char str[60];
-      snprintf(str, 60, "MALLOC: calloc(%lu,%lu) => (ptr=%p, size=%d)",
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: calloc(%lu,%lu) => (ptr=%p, size=%d)",
         n, sz, NULL, 0);
       puts(str);
     }
@@ -176,9 +176,9 @@ void *calloc(size_t n, size_t sz){
 
 
   if(DEBUG){
-    char str[60];
+    char str[BUF_SZ];
     struct chunk *t = getchunk((uintptr_t)vp);
-    snprintf(str, 60, "MALLOC: calloc(%lu,%lu) => (ptr=%p, size=%d)",
+    snprintf(str, BUF_SZ, "MALLOC: calloc(%lu,%lu) => (ptr=%p, size=%d)",
       n, sz, vp, (int)t->chunksize);
     puts(str);
   }
@@ -186,17 +186,26 @@ void *calloc(size_t n, size_t sz){
 }
 
 
+
+
+
+
 /*--------------------REALLOC----------------------------------*/
 
-
-
 void *realloc(void *ptr, size_t sizerequest){
+  int oldsize = sizerequest;
   /*Checking parameters to determine best course of action*/
   if(ptr == NULL){
     return malloc(sizerequest);
   }
   else if(sizerequest == 0){
     free(ptr);
+    if(DEBUG){
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+        ptr, oldsize, NULL, 0);
+      puts(str);
+    }
     return NULL;
   }
 
@@ -204,6 +213,12 @@ void *realloc(void *ptr, size_t sizerequest){
   struct chunk *c = getchunk( (uintptr_t) ptr);
 
   if(c == NULL){
+    if(DEBUG){
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+        ptr, sizerequest, NULL, 0);
+      puts(str);
+    }
     return NULL; /*Memory could not be found in allocation*/
   }
 
@@ -216,15 +231,33 @@ void *realloc(void *ptr, size_t sizerequest){
   if(c->chunksize > sizerequest){
     /*Just making sure address was allocated by malloc/calloc/realloc*/
     if(c->isfree){
+      if(DEBUG){
+        char str[BUF_SZ];
+        snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+          ptr, sizerequest, NULL, 0);
+        puts(str);
+      }
       return NULL; /*memory was not allocated by malloc!*/
     }
     /*release the memory we might not need*/
     shrink(c, sizerequest);
+    if(DEBUG){
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+        ptr, oldsize, (void*)c->memptr, (int)c->chunksize);
+      puts(str);
+    }
     return (void*) c->memptr;
   }
 
   /*Chunk too small, attempt to merge w/ adjacent chunk*/
   if(attemptmerge(c, sizerequest)){
+    if(DEBUG){
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+        ptr, oldsize, (void*)c->memptr, (int)c->chunksize);
+      puts(str);
+    }
     return (void*) c->memptr;
   }
 
@@ -232,20 +265,31 @@ void *realloc(void *ptr, size_t sizerequest){
   void *vp = malloc(sizerequest);
   if(vp == NULL){
     /*Could not allocate memory!*/
+    if(DEBUG){
+      char str[BUF_SZ];
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+        ptr, oldsize, NULL, 0);
+      puts(str);
+    }
     return NULL;
   }
 
   /*Copy Memory to new location*/
   char *copy = (char *) c->memptr;
-  // char *paste = (char *) vp;
   int i;
   for(i = 0; i < sizerequest; i++){
-    // *(paste+i) = *(copy+i);
     memset(vp+i, *(copy+i), 1);
   }
 
   /*Finally, set original ptr free*/
   free(ptr);
   /*vp now contains original memory*/
+  if(DEBUG){
+    char str[BUF_SZ];
+    struct chunk *t = getchunk(vp);
+    snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+      ptr, oldsize, (void*)t->memptr, (int)t->chunksize);
+    puts(str);
+  }
   return vp;
 }
