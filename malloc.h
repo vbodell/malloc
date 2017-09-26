@@ -63,6 +63,7 @@ static uintptr_t UPPERLIM = 0;
 
 /*Function declarations*/
 void fprintMemory(char * fname);
+void shrink(struct chunk *, size_t);
 
 
 
@@ -95,13 +96,22 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
     MEM = newbreak;
   }
   else{ /*We have traversed linked list already*/
-    node->next = newbreak;
+    if(node->isfree){/*We can expand from previous node*/
+      node->chunksize += newbreak->chunksize + HEADERSIZE;
+      node->isfree = FALSE;
+      shrink(node, sizerequest); /*Shrink to properly accomodate request*/
+      return (void *)node->memptr;
+    }
+    else{
+      node->next = newbreak;
+    }
   }
 
 
 
   struct chunk *t = newbreak;
-  int remaining_CAKE = UPPERLIM - (newbreak->memptr + newbreak->chunksize + HEADERSIZE);
+  int remaining_CAKE = UPPERLIM -
+    (newbreak->memptr + newbreak->chunksize + HEADERSIZE);
 
   if(remaining_CAKE > 0){/*Create chunk out of remaining memoryspace*/
     t->next = (struct chunk*) (newbreak->memptr + newbreak->chunksize);
@@ -111,14 +121,28 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
     t->chunksize = remaining_CAKE;
     t->isfree = TRUE;
     t->memptr = nbrkptr + HEADERSIZE;
-
-    /*no need to increment traverse variables since we are done*/
   }
 
 
   return (void*) newbreak->memptr;
 }
+/*-------------------KERNEL-MEMORY-RETURN-FUNCT------------------*/
+/*A function for returning a chunk t to kernel*/
+void here_you_go_kernel(struct chunk *t){
+  uintptr_t returnPiece = (t->chunksize+HEADERSIZE); /*size to return*/
+  if(sbrk(-returnPiece) == SBRKERR){
+    /*sbrk(2) failed*/
+    errno = ENOMEM;
+    return;
+  }
 
+  UPPERLIM = (uintptr_t) t; /*Upperlimit is where chunk began*/
+  /*Make sure final node doesn't point to returned memory*/
+  for(t = MEM; t->next->next; t = t->next);
+  t->next = NULL;
+
+  return;
+}
 
 /*---------------------------CHUNK-FUNCTIONS--------------------------------*/
 
@@ -135,11 +159,11 @@ void mergechunks(){
 
       while(temp && temp->isfree){
         /*If there is a next chunk that also happens to be free*/
-        // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", temp->chunksize, temp->isfree, temp->memptr, temp->next);
+
         t->chunksize += temp->chunksize+HEADERSIZE; /*increment size of first*/
-        t->next = temp->next; /*remove temp from chain (now part of memoryblock)*/
+        /*remove temp from chain (now part of memoryblock)*/
+        t->next = temp->next;
         temp = temp->next; /*Move to adjacent free chunk*/
-        // printf("%p\n", temp);
       }
     }
     /*while merging we might be on last node, thus we must break forloop*/
@@ -148,9 +172,11 @@ void mergechunks(){
     /*We have now merged all we can, move to next node*/
   }
 
-  // if(t->chunksize > CAKESIZE && ((uintptr_t) t - BREAK > CAKESIZE)){
-  //   here_you_go_kernel(t);
-  // }
+  /*We have more than one cake out on the field*/
+  if(t->isfree && t->chunksize + HEADERSIZE > CAKESIZE &&
+      ((uintptr_t) t - BREAK > CAKESIZE)){
+    here_you_go_kernel(t);
+  }
 
   return;
 }
@@ -195,7 +221,7 @@ void shrink(struct chunk *c, size_t sizerequest){
   if( (c->chunksize-sizerequest) > HEADERSIZE ){ /*We can fit new chunk*/
     /*Store next in list*/
     struct chunk *temp = c->next;
-    /*let current nodes next be new node*/
+    /*let next of current node be new node*/
     c->next = (struct chunk*) (c->memptr + sizerequest);
     struct chunk *nc = c->next;
 
@@ -235,8 +261,7 @@ char attemptmerge(struct chunk* c, size_t sizerequest){
 
 
 /*A function to print information about malloc memory*/
-void fprintMemory(char * fname)
-{
+void fprintMemory(char * fname){
   FILE *fp;
 
   fp = fopen(fname, "w+");
@@ -246,29 +271,16 @@ void fprintMemory(char * fname)
 
   while(t->next){
 
-    sprintf(str1, "Chunk: {sz=%lu, free=%d, &mem=%lx, &next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+    sprintf(str1, "Chunk: {sz=%lu, free=%d, &mem=%lx, &next=%p}\n",
+      t->chunksize, t->isfree, t->memptr, t->next);
     fputs(str1, fp);
 
     t = t->next;
   }
   /*t now points to the last node in the chain but we have not printed it.*/
 
-  sprintf(str1, "Chunk: {sz=%lu, free=%d, &mem=%lx, &next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
+  sprintf(str1, "Chunk: {sz=%lu, free=%d, &mem=%lx, &next=%p}\n",
+    t->chunksize, t->isfree, t->memptr, t->next);
   fputs(str1, fp);
   fclose(fp);
-}
-
-
-/*------------------UNTESTED-KERNEL-MEMORY-RETURN-FUNCT------------------*/
-void here_you_go_kernel(struct chunk *t){
-  uintptr_t returnPiece = (t->chunksize+HEADERSIZE);
-  if(sbrk(-returnPiece) == SBRKERR){
-    /*sbrk(2) failed*/
-    errno = ENOMEM;
-    return;
-  }
-  UPPERLIM = (uintptr_t) t - returnPiece;
-  /*Make sure t doesn't point to anything wierd*/
-  t = NULL;
-  return;
 }

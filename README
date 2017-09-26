@@ -16,6 +16,10 @@ them will first produce debugging output to malloc, and afterwards calloc or
 realloc.
 
 Concerning returning memory to kernel when large chunks become free, the
-solution is not lost on me, I just did not have enough time to implement it.
-There is a place holder (in comments) in malloc.h which should do the trick 
-but has not been tested.
+function here_you_go_kernel(), it has not been as extensively tested as the
+rest of the code and is therefor not called (the calling code is in comments,
+lines 175-179 in malloc.h
+
+There is also a function to print the chunks in the malloc.h file,
+lines 263-2286 in malloc.h, which is not called either, 
+used only during testing.
