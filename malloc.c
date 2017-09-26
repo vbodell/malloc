@@ -26,31 +26,6 @@ static char firstRun = TRUE;
 static char DEBUG = FALSE;
 
 
-/*Shrink chunk c and create new chunk out of remaining*/
-void shrink(struct chunk *c, size_t sizerequest){
-
-  if(c->chunksize <= sizerequest){
-    /*request invalid*/
-    return;
-  }
-  if( (c->chunksize-sizerequest) > HEADERSIZE ){ /*We can fit new chunk*/
-    /*Store next in list*/
-    struct chunk *temp = c->next;
-    /*let current nodes next be new node*/
-    c->next = (struct chunk*) (c->memptr + sizerequest);
-    struct chunk *nc = c->next;
-
-    /*Define new chunk*/
-    nc->chunksize = c->chunksize - sizerequest - HEADERSIZE,
-    nc->isfree = TRUE,
-    nc->memptr = (uintptr_t) nc + HEADERSIZE,
-    nc->next = temp;
-    /*Update shrunk size*/
-    c->chunksize = sizerequest;
-  }
-}
-
-
 /*Okay, so now this should return some memory when asked for*/
 void *malloc(size_t size){
 
@@ -213,29 +188,6 @@ void *calloc(size_t n, size_t sz){
 
 /*--------------------REALLOC----------------------------------*/
 
-
-/*Attempts to merge adjacent chunks starting from c
-  to make c->chunksize >= sizerequest
-  We only need to check next chunk since every call to free()
-  results in adjacent free chunks merging
-  Returns TRUE if successful*/
-char attemptmerge(struct chunk* c, size_t sizerequest){
-
-  struct chunk *t = c->next;
-  /*If next node is free we might be able to merge to get enough memory*/
-  if(t->isfree){
-    c->next = t->next;
-    c->chunksize += t->chunksize+HEADERSIZE;
-
-    if(c->chunksize >= sizerequest){
-      /*Before returning, make sure we're not wasting too much memory on user*/
-      shrink(c, sizerequest);
-      return TRUE;
-    }
-  }
-  /*Adjacent chunk was not sufficient*/
-  return FALSE;
-}
 
 
 void *realloc(void *ptr, size_t sizerequest){

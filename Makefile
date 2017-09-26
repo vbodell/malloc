@@ -8,6 +8,12 @@ malloc: malloc.o
 try: tryme.o
 	$(CC) $(CFLAGS) -L lib64/ -o tryme tryme.o -lmalloc
 
+main: main.c mylib
+	$(CC) $(CFLAGS) -o main main.c libmalloc.a
+
+mylib: malloc.o
+	ar -r libmalloc.a malloc.o
+
 tryme.o: tryme.c
 	$(CC) $(CFLAGS) -c tryme.c
 
@@ -39,18 +45,4 @@ malloc64.o: malloc.c
 clean:
 	rm *.o
 
-
-
-make intel-all
-gcc -Wall -g -fpic -m32 -c -o malloc32.o malloc.c
-In file included from /usr/include/features.h:399:0,
-                 from /usr/include/stdio.h:27,
-                 from malloc.c:12:
-/usr/include/gnu/stubs.h:7:27: fatal error: gnu/stubs-32.h: No such file or directory
- # include <gnu/stubs-32.h>
-                           ^
-compilation terminated.
-make: *** [malloc32.o] Error 1
-
-Build failed.
 
