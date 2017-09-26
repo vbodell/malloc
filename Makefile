@@ -2,8 +2,7 @@ CC = gcc
 
 CFLAGS = -Wall -g -fpic
 
-malloc: malloc.o
-	$(CC) -Wall -g -o malloc malloc.c
+malloc: malloc.o mylib
 
 try: tryme.o
 	$(CC) $(CFLAGS) -L lib64/ -o tryme tryme.o -lmalloc
@@ -17,7 +16,7 @@ mylib: malloc.o
 tryme.o: tryme.c
 	$(CC) $(CFLAGS) -c tryme.c
 
-malloc.o: malloc.c
+malloc.o: malloc.c malloc.h
 	$(CC) $(CFLAGS) -c malloc.c
 
 intel-all: lib64/libmalloc.so lib/libmalloc.so
