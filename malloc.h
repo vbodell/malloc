@@ -46,7 +46,7 @@ static uintptr_t BREAK = 0;
 static uintptr_t UPPERLIM = 0;
 
 /* A big piece is a CAKE, which we turn into chunks (Pizza-slice?)*/
-#define CAKESIZE 2048
+#define CAKESIZE 64000
 
 /*Define sbrk(2) error-value*/
 #define SBRKERR (struct chunk*)-1
@@ -57,6 +57,10 @@ static uintptr_t UPPERLIM = 0;
 /*To improve readability*/
 #define TRUE 1
 #define FALSE 0
+
+
+/*Function declarations*/
+void fprintMemory(char * fname);
 
 
 
