@@ -9,8 +9,8 @@ int main(){
   // printf("Test3: sz=1, line above should read alignment p=%p\n", t3);
   //
 
-  char *str;
-  str = (char*) malloc(400);
+  // char *str;
+  // str = (char*) malloc(400);
   // int *tp = str;
   // if(str) printf("Test4: Successfully allocated char*, p=%p\n", str);
   //
@@ -23,7 +23,7 @@ int main(){
   //
   // printf("\n%s, %p\n\n", str, str);
   //
-  int *ip = (int*) malloc(31);
+  // int *ip = (int*) malloc(31);
   // struct chunk *t = getchunk((uintptr_t)ip);
   // printf("Chunk: {s=%lu, free=%d, adress=%lx, next=%p}\n", t->chunksize, t->isfree, t->memptr, t->next);
   //
@@ -31,10 +31,10 @@ int main(){
   //
   // void *vp = malloc(150);
   //
-  // char *p1 = calloc(40, sizeof(char));
+  char *p1 = calloc(10, sizeof(char));
   // float *p2 = calloc(90, sizeof(float));
-  double *c3 = calloc(41940, sizeof(double));
-  // int *cp4 = calloc(4100, sizeof(int));
+  // double *c3 = calloc(41940, sizeof(double));
+  int *cp4 = calloc(4100, sizeof(int));
 
   // printf("Test5: allocated multiple pointers within chunks, ip=%p, dp=%p, vp=%p\n", ip, dp, vp);
   // // printf("BRK: %p, UL: %p \n", (void*)BREAK, (void*)UPPERLIM);
@@ -49,11 +49,12 @@ int main(){
   //
   fprintMemory("memoryprint.txt");
   //
-
-  // free(p1);
+  char* p2 = realloc(p1, 50);
   // free(p2);
-  free(c3);
+  // free(c3);
   fprintMemory("merged.txt");
+  // realloc(p1, 0);
+  fprintMemory("temp.txt");
   // free(str);
   // free(dp);
   // free(vp);
