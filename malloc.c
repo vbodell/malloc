@@ -170,7 +170,6 @@ void *calloc(size_t n, size_t sz){
     return NULL;
   }
 
-  char* cp = (char*) vp;
   /*clear all memory cells*/
   memset(vp, 0, membytes);
 
@@ -202,7 +201,7 @@ void *realloc(void *ptr, size_t sizerequest){
     free(ptr);
     if(DEBUG){
       char str[BUF_SZ];
-      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%d) => (ptr=%p, size=%d)",
         ptr, oldsize, NULL, 0);
       puts(str);
     }
@@ -215,7 +214,7 @@ void *realloc(void *ptr, size_t sizerequest){
   if(c == NULL){
     if(DEBUG){
       char str[BUF_SZ];
-      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%zu) => (ptr=%p, size=%d)",
         ptr, sizerequest, NULL, 0);
       puts(str);
     }
@@ -233,7 +232,7 @@ void *realloc(void *ptr, size_t sizerequest){
     if(c->isfree){
       if(DEBUG){
         char str[BUF_SZ];
-        snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+        snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%zu) => (ptr=%p, size=%d)",
           ptr, sizerequest, NULL, 0);
         puts(str);
       }
@@ -243,7 +242,7 @@ void *realloc(void *ptr, size_t sizerequest){
     shrink(c, sizerequest);
     if(DEBUG){
       char str[BUF_SZ];
-      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%d) => (ptr=%p, size=%d)",
         ptr, oldsize, (void*)c->memptr, (int)c->chunksize);
       puts(str);
     }
@@ -254,7 +253,7 @@ void *realloc(void *ptr, size_t sizerequest){
   if(attemptmerge(c, sizerequest)){
     if(DEBUG){
       char str[BUF_SZ];
-      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%d) => (ptr=%p, size=%d)",
         ptr, oldsize, (void*)c->memptr, (int)c->chunksize);
       puts(str);
     }
@@ -267,7 +266,7 @@ void *realloc(void *ptr, size_t sizerequest){
     /*Could not allocate memory!*/
     if(DEBUG){
       char str[BUF_SZ];
-      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+      snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%d) => (ptr=%p, size=%d)",
         ptr, oldsize, NULL, 0);
       puts(str);
     }
@@ -286,8 +285,9 @@ void *realloc(void *ptr, size_t sizerequest){
   /*vp now contains original memory*/
   if(DEBUG){
     char str[BUF_SZ];
-    struct chunk *t = getchunk(vp);
-    snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%lu) => (ptr=%p, size=%d)",
+    struct chunk *t;
+    t = getchunk((uintptr_t)vp);
+    snprintf(str, BUF_SZ, "MALLOC: realloc(%p,%d) => (ptr=%p, size=%d)",
       ptr, oldsize, (void*)t->memptr, (int)t->chunksize);
     puts(str);
   }

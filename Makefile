@@ -2,16 +2,14 @@ CC = gcc
 
 CFLAGS = -Wall -g -fpic
 
-malloc: malloc.o mylib
-
-try: tryme.o
-	$(CC) $(CFLAGS) -L lib64/ -o tryme tryme.o -lmalloc
-
-main: main.c mylib
-	$(CC) $(CFLAGS) -o main main.c libmalloc.a
-
-mylib: malloc.o
+malloc: malloc.o
 	ar -r libmalloc.a malloc.o
+
+try: tryme.o malloc
+	$(CC) $(CFLAGS) -o tryme tryme.o libmalloc.a
+
+main: main.c malloc
+	$(CC) $(CFLAGS) -o main main.c libmalloc.a
 
 tryme.o: tryme.c
 	$(CC) $(CFLAGS) -c tryme.c
@@ -42,6 +40,4 @@ malloc64.o: malloc.c
 	$(CC) $(CFLAGS) -m64 -c -o malloc64.o malloc.c
 
 clean:
-	rm *.o
-
-
+	rm *.o *.txt tryme main
