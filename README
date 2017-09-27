@@ -16,9 +16,9 @@ them will first produce debugging output to malloc, and afterwards calloc or
 realloc.
 
 Concerning returning memory to kernel when large chunks become free, the
-function here_you_go_kernel(), it has not been as extensively tested as the
+function is here_you_go_kernel(), it has not been as extensively tested as the
 rest of the code and is therefor not called (the calling code is in comments,
-lines 175-179 in malloc.h
+lines 175-179 in malloc.h)
 
 There is also a function to print the chunks in the malloc.h file,
 lines 263-2286 in malloc.h, which is not called either, 
