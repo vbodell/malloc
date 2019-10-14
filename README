@@ -1,6 +1,6 @@
 Victor Bodell (sbodell)
 
-#Instructions
+# Instructions
 1) Compile with 'make' or 'make malloc'
    This builds from source files and creates an archive (libmalloc.a), 
    a library to link to.
@@ -8,7 +8,7 @@ Victor Bodell (sbodell)
    shared library will be built
 
 
-#Other Information
+# Other Information
 Concerning Debugging output: Whenever calloc or realloc is called they will use
 malloc as their memory allocator, size allocated will not be available for 
 malloc or calloc after the return from malloc, which means a call to one of
