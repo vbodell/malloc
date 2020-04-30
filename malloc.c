@@ -10,7 +10,6 @@ First release: 09/25/2017
 
 ******************************************************************************/
 
-
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -27,7 +26,6 @@ First release: 09/25/2017
 
 static char firstRun = TRUE;
 static char DEBUG = FALSE;
-
 
 /*Okay, so now this should return some memory when asked for*/
 void *malloc(size_t size){
@@ -120,9 +118,6 @@ void *malloc(size_t size){
   return ptr;
 }
 
-
-
-
 void free(void *ptr){
   if(ptr == NULL){
     return;
@@ -147,9 +142,6 @@ void free(void *ptr){
 
   return;
 }
-
-
-
 
 /* Clear and Allocate memory,
   n=number of items
@@ -183,13 +175,6 @@ void *calloc(size_t n, size_t sz){
   }
   return vp;
 }
-
-
-
-
-
-
-/*--------------------REALLOC----------------------------------*/
 
 void *realloc(void *ptr, size_t sizerequest){
   int oldsize = sizerequest;

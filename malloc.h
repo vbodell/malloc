@@ -55,17 +55,13 @@ static uintptr_t UPPERLIM = 0;
 
 /*-----------CORE-MEMORY-PARAMS--END--------------*/
 
-
 /*To improve readability*/
 #define TRUE 1
 #define FALSE 0
 
-
 /*Function declarations*/
 void fprintMemory(char * fname);
 void shrink(struct chunk *, size_t);
-
-
 
 void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
   struct chunk *newbreak;
@@ -90,7 +86,6 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
   newbreak->isfree = FALSE,
   newbreak->memptr = nbrkptr+HEADERSIZE;
 
-
   /*If node is NULL, there is no root & memory has not been initialized*/
   if(node == NULL){
     MEM = newbreak;
@@ -107,8 +102,6 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
     }
   }
 
-
-
   struct chunk *t = newbreak;
   int remaining_CAKE = UPPERLIM -
     (newbreak->memptr + newbreak->chunksize + HEADERSIZE);
@@ -123,9 +116,9 @@ void *more_memory_please(struct chunk *node, uintptr_t sizerequest){
     t->memptr = nbrkptr + HEADERSIZE;
   }
 
-
   return (void*) newbreak->memptr;
 }
+
 /*-------------------KERNEL-MEMORY-RETURN-FUNCT------------------*/
 /*A function for returning a chunk t to kernel*/
 void here_you_go_kernel(struct chunk *t){
@@ -145,8 +138,6 @@ void here_you_go_kernel(struct chunk *t){
 }
 
 /*---------------------------CHUNK-FUNCTIONS--------------------------------*/
-
-
 
 void mergechunks(){
   /*Traverse and merge adjacent free chunks*/
@@ -181,8 +172,6 @@ void mergechunks(){
   return;
 }
 
-
-
 /*Gets the chunk specified from address
 returns null if address is not amongst chunks*/
 struct chunk *getchunk(uintptr_t address){
@@ -208,9 +197,6 @@ struct chunk *getchunk(uintptr_t address){
   return NULL;
 }
 
-
-
-
 /*Shrink chunk c and create new chunk out of remaining*/
 void shrink(struct chunk *c, size_t sizerequest){
 
@@ -235,7 +221,6 @@ void shrink(struct chunk *c, size_t sizerequest){
   }
 }
 
-
 /*Attempts to merge adjacent chunks starting from c
   to make c->chunksize >= sizerequest
   We only need to check next chunk since every call to free()
@@ -259,9 +244,8 @@ char attemptmerge(struct chunk* c, size_t sizerequest){
   return FALSE;
 }
 
-
 /*A function to print information about malloc memory*/
-void fprintMemory(char * fname){
+void fprintMemory(char *fname){
   FILE *fp;
 
   fp = fopen(fname, "w+");
